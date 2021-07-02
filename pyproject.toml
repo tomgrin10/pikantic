@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pikantic"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python library for easy message broker handling using Pydantic"
 authors = ["Tom Gringauz <tomgrin10@gmail.com>"]
 license = "MIT"
