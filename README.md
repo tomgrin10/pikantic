@@ -10,10 +10,10 @@ Python library for easy message broker handling using Pydantic
 ### Basic Usage
 
 ```python
-import pikantic
+from pikantic import Pikantic, IncomingMessage
 from pydantic import BaseModel
 
-app = pikantic.Pikantic(AMQP_URI)
+app = Pikantic(AMQP_URI)
 
 
 class PersonModel(BaseModel):
@@ -22,7 +22,7 @@ class PersonModel(BaseModel):
 
 
 @app.on_rabbit('test_queue')
-async def handle_message(msg: aio_pika.Message, person: PersonModel):
+async def handle_message(msg: IncomingMessage, person: PersonModel):
     print(msg.body)
     print(person.age)
 
