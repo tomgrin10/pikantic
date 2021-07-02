@@ -1,0 +1,63 @@
+name: Publish to PyPi
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install Poetry
+        uses: dschep/install-poetry-action@v1
+        
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/.virtualenvs
+          key: poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ hashFiles('**/poetry.lock') }}
+            
+      - name: Set Poetry config
+        run: |
+          poetry config virtualenvs.in-project false
+          poetry config virtualenvs.path ~/.virtualenvs
+
+      - name: Set up git credentials
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Get the version from the tag
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
+
+      - name: Update version and commit
+        run: |
+          sed -i -E 's/^version = .*$/version = "${{ steps.get_version.outputs.VERSION }}"/' pyproject.toml
+          git add pyproject.toml
+          git commit -m "Updated version to ${{ steps.get_version.outputs.VERSION }}"
+      
+      - name: Build package
+        run: poetry build
+
+      - name: Publish to pypi
+        run: poetry publish -u __token__ -p ${{ secrets.pypi_token }}
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
