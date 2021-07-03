@@ -1,5 +1,7 @@
 import asyncio
+import inspect
 import json
+import logging
 from inspect import Signature
 from logging import getLogger
 from typing import Callable, Any, Optional, List, Type, Dict
@@ -41,8 +43,12 @@ class Listener(BaseModel):
             self.queue_name,
             auto_delete=True
         )
+
+        logging.info(f"Starting to consume messages from {self.queue_name} queue.")
+
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
+                logging.debug(f"Received a message in {self.queue_name} queue.")
                 async with message.process():
                     try:
                         kwargs = self.create_kwargs(message)
@@ -81,11 +87,16 @@ class Pikantic:
 
     def on_rabbit(self, queue_name: str):
         def decorator(func: Callable[..., Any]):
+            if not inspect.iscoroutinefunction(func):
+                raise ValueError(f"Callback '{func.__name__}' is not an async function.")
+
             self.add_listener(queue_name, func)
 
         return decorator
 
     async def async_run(self, loop):
+        logging.basicConfig(level=logging.INFO)
+
         self._connection = await aio_pika.connect_robust(
             *self._conn_args,
             **self._conn_kwargs,
@@ -93,6 +104,8 @@ class Pikantic:
         async with self._connection:
             channel: Channel = await self._connection.channel()
             tasks = []
+
+            logging.info("Starting pikantic server.")
 
             for listener in self._listeners:
                 task = asyncio.create_task(listener.listen(channel))
